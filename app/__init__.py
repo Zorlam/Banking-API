@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from flask import Flask
 from flask_cors import CORS
+from flask_talisman import Talisman
 from dotenv import load_dotenv
 
 from app.extensions import db, limiter, jwt, limiter
@@ -48,6 +49,27 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     limiter.init_app(app)
+    app.config["JWT_TOKEN_LOCATION"] = ["headers"]
+
+    db.init_app(app)
+    jwt.init_app(app)
+    limiter.init_app(app)
+
+    is_production = os.environ.get("FLASK_ENV") == "production"
+    Talisman(
+        app,
+        force_https=is_production,
+        strict_transport_security=is_production,
+        strict_transport_security_max_age=31536000,
+        content_security_policy={
+            "default-src": "'none'",
+        },
+        content_security_policy_nonce_in=None,
+        referrer_policy="no-referrer",
+        frame_options="DENY",
+        x_content_type_options=True,
+        x_xss_protection=False,
+    )
 
     frontend_origin = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000")
     CORS(app, resources={r"/api/*": {"origins": frontend_origin}}, supports_credentials=True)
