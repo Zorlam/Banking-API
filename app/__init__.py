@@ -6,16 +6,12 @@ from flask_cors import CORS
 from flask_talisman import Talisman
 from dotenv import load_dotenv
 
-from app.extensions import db, limiter, jwt, limiter
+from app.extensions import db, jwt, limiter
 
 load_dotenv()
 
 
 def _normalize_database_url(url: str) -> str:
-    """Most hosts (Render, Heroku-style providers) hand out connection
-    strings starting with postgres://, but SQLAlchemy 1.4+ requires the
-    postgresql:// scheme. Without this, deploys crash on the first request
-    that touches the database with a confusing dialect error."""
     if url.startswith("postgres://"):
         return url.replace("postgres://", "postgresql://", 1)
     return url
@@ -30,25 +26,14 @@ def create_app():
         os.environ.get("DATABASE_URL", "sqlite:///zenith.db")
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-    # Postgres connections can go stale/get dropped by the host's connection
-    # pooler while idle; pre-pinging avoids "server closed the connection
-    # unexpectedly" errors on the first request after a quiet period.
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
     app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
-
-
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(
         minutes=int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_MINUTES", 30))
     )
     app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(
         days=int(os.environ.get("JWT_REFRESH_TOKEN_EXPIRES_DAYS", 7))
     )
-    app.config["JWT_TOKEN_LOCATION"] = ["headers"]
-
-    db.init_app(app)
-    jwt.init_app(app)
-    limiter.init_app(app)
     app.config["JWT_TOKEN_LOCATION"] = ["headers"]
 
     db.init_app(app)
@@ -81,7 +66,7 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(accounts_bp, url_prefix="/api/accounts")
     app.register_blueprint(transactions_bp, url_prefix="/api/transactions")
-    
+
     from app.errors import register_error_handlers
     register_error_handlers(app)
 
