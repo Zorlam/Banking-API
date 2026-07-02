@@ -5,7 +5,7 @@ from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-from app.extensions import db, jwt
+from app.extensions import db, limiter, jwt, limiter
 
 load_dotenv()
 
@@ -34,6 +34,8 @@ def create_app():
     # pooler while idle; pre-pinging avoids "server closed the connection
     # unexpectedly" errors on the first request after a quiet period.
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
+    app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
+
 
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(
         minutes=int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_MINUTES", 30))
@@ -45,6 +47,7 @@ def create_app():
 
     db.init_app(app)
     jwt.init_app(app)
+    limiter.init_app(app)
 
     frontend_origin = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000")
     CORS(app, resources={r"/api/*": {"origins": frontend_origin}}, supports_credentials=True)

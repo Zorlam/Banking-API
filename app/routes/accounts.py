@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models import User
 from app.validation import ValidationError, require_fields, validate_password
 
@@ -20,6 +20,7 @@ def get_my_account():
 
 @accounts_bp.post("/change-password")
 @jwt_required()
+@limiter.limit("5 per hour")
 def change_password():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)

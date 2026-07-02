@@ -8,7 +8,7 @@ from flask_jwt_extended import (
     jwt_required,
 )
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models import User, Account
 from app.validation import (
     ValidationError,
@@ -29,6 +29,7 @@ def _generate_account_number() -> str:
 
 
 @auth_bp.post("/register")
+@limiter.limit("10 per hour")
 def register():
     payload = request.get_json(silent=True) or {}
     require_fields(payload, ["fullName", "email", "password"])
@@ -63,6 +64,8 @@ def register():
 
 
 @auth_bp.post("/login")
+@limiter.limit("10 per minute")
+@limiter.limit("50 per hour")
 def login():
     payload = request.get_json(silent=True) or {}
     require_fields(payload, ["email", "password"])
@@ -71,8 +74,6 @@ def login():
     password = payload["password"]
 
     user = User.query.filter_by(email=email).first()
-    # Constant-shape response whether the email exists or not, to avoid
-    # leaking which emails are registered.
     if not user or not user.check_password(password):
         raise ValidationError("Invalid email or password.", field="form")
 
@@ -91,6 +92,7 @@ def login():
 
 @auth_bp.post("/refresh")
 @jwt_required(refresh=True)
+@limiter.limit("30 per hour")
 def refresh():
     identity = get_jwt_identity()
     new_access_token = create_access_token(identity=identity)
