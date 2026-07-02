@@ -81,15 +81,18 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(accounts_bp, url_prefix="/api/accounts")
     app.register_blueprint(transactions_bp, url_prefix="/api/transactions")
-
+    
     from app.errors import register_error_handlers
-
     register_error_handlers(app)
 
-    with app.app_context():
-        db.create_all()
-        from app.seed import seed_demo_data
+    _db_initialized = {"done": False}
 
-        seed_demo_data()
+    @app.before_request
+    def _init_db_once():
+        if not _db_initialized["done"]:
+            _db_initialized["done"] = True
+            db.create_all()
+            from app.seed import seed_demo_data
+            seed_demo_data()
 
     return app
