@@ -14,12 +14,6 @@ python run.py
 
 Runs on **http://127.0.0.1:5050** by default. On first run, it seeds two demo users:
 
-| Email | Password | Starting balance |
-|---|---|---|
-| daniel@example.com | Prayer123 | ₦1,000.00 |
-| sharon@example.com | Sunrise123 | ₦500.00 |
-
-Generate real secrets for `.env` rather than using placeholders:
 
 ```bash
 python3 -c "import secrets; print(secrets.token_hex(32))"
@@ -45,9 +39,6 @@ All endpoints are under `/api`. JSON in, JSON out.
 
 Errors come back as `{"error": "message", "field": "amount"}` with a 400/401/404/500 status.
 
-## What changed from the original prototype
-
-The original version (a single `app.py`) stored users and balances in plain Python dicts — passwords in plaintext, balances reset on every restart, no transaction record, no validation on amounts, and no protection against two requests racing on the same balance. This version instead has:
 
 - **Persistence**: SQLAlchemy models (`User`, `Account`, `Transaction`) backed by SQLite (swap `DATABASE_URL` for Postgres in production).
 - **Password hashing**: bcrypt, 12 rounds.
