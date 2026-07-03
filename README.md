@@ -1,57 +1,149 @@
 # Zenith — Backend
 
-A Flask JSON API for the Zenith fintech dashboard. SQLAlchemy + SQLite, bcrypt password hashing, JWT auth, atomic transfers, money stored as integer minor units (kobo) to avoid float rounding.
+A production-deployed Flask REST API powering a banking-style fintech application. The backend provides authentication, account management, transaction processing, and secure money transfers using PostgreSQL in production and SQLite for local development.
+
+## Live Deployment
+
+* **Backend API:** https://banking-backend-2mwq.onrender.com
+* **Frontend:** https://keen-pavlova-f4dc6e.netlify.app
+* **Database:** Neon PostgreSQL (production)
+* Frontend Repository: https://github.com/Zorlam/banking-frontend
+
+## Tech Stack
+
+* Python
+* Flask
+* Flask-SQLAlchemy
+* PostgreSQL (Neon)
+* SQLite (local development)
+* Flask-JWT-Extended
+* Flask-CORS
+* Flask-Talisman
+* Gunicorn
+* bcrypt
 
 ## Setup
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# macOS/Linux
+source venv/bin/activate
+
 pip install -r requirements.txt
-cp .env.example .env            # then fill in real random secrets — see below
+
+cp .env.example .env
+
+# Fill in the required environment variables
+
 python run.py
 ```
 
-Runs on **http://127.0.0.1:5050** by default. On first run, it seeds two demo users:
+The development server runs on:
 
-
-```bash
-python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
+http://127.0.0.1:5050
+```
+
+For production, the application is served using Gunicorn.
+
+## Environment Variables
+
+Required variables:
+
+```
+SECRET_KEY=
+JWT_SECRET_KEY=
+DATABASE_URL=
+JWT_ACCESS_TOKEN_EXPIRES_MINUTES=
+JWT_REFRESH_TOKEN_EXPIRES_DAYS=
+FRONTEND_ORIGIN=
+```
+
+See `.env.example` for the complete template.
 
 ## API
 
-All endpoints are under `/api`. JSON in, JSON out.
+All endpoints are available under `/api`.
 
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| POST | `/auth/register` | — | Create account, returns tokens |
-| POST | `/auth/login` | — | Returns tokens |
-| POST | `/auth/refresh` | refresh token | New access token |
-| GET | `/auth/me` | access token | Current user + account |
-| GET | `/accounts/me` | access token | Current balance |
-| POST | `/accounts/change-password` | access token | Change password |
-| GET | `/transactions/history` | access token | Paginated, `?page=&perPage=` |
-| POST | `/transactions/deposit` | access token | `{amount}` |
-| POST | `/transactions/withdraw` | access token | `{amount}` |
-| POST | `/transactions/transfer` | access token | `{receiverAccountNumber, amount, description?}` |
-| POST | `/transactions/airtime` | access token | `{amount, phone}` |
+| Method | Endpoint                    | Authentication | Description                        |
+| ------ | --------------------------- | -------------- | ---------------------------------- |
+| POST   | `/auth/register`            | No             | Register a new user                |
+| POST   | `/auth/login`               | No             | Authenticate user                  |
+| POST   | `/auth/refresh`             | Refresh Token  | Generate a new access token        |
+| GET    | `/auth/me`                  | Access Token   | Get authenticated user             |
+| GET    | `/accounts/me`              | Access Token   | Retrieve account balance           |
+| POST   | `/accounts/change-password` | Access Token   | Change account password            |
+| GET    | `/transactions/history`     | Access Token   | View paginated transaction history |
+| POST   | `/transactions/deposit`     | Access Token   | Deposit funds                      |
+| POST   | `/transactions/withdraw`    | Access Token   | Withdraw funds                     |
+| POST   | `/transactions/transfer`    | Access Token   | Transfer funds between accounts    |
+| POST   | `/transactions/airtime`     | Access Token   | Purchase airtime                   |
 
-Errors come back as `{"error": "message", "field": "amount"}` with a 400/401/404/500 status.
+All responses are JSON.
 
+## Features
 
-- **Persistence**: SQLAlchemy models (`User`, `Account`, `Transaction`) backed by SQLite (swap `DATABASE_URL` for Postgres in production).
-- **Password hashing**: bcrypt, 12 rounds.
-- **JWT auth** instead of server-side sessions, since the frontend is a separate SPA.
-- **Validation** (`app/validation.py`): every amount, email, password, and phone number is checked server-side before touching the database.
-- **Atomic, locked transfers**: `transfer` locks both the sender's and receiver's account rows (in a fixed order, to avoid deadlocks) before mutating either balance, and writes both legs of the transfer in one commit.
-- **Integer money**: balances are stored as `balance_minor` (kobo), not floats, so nothing gets silently rounded.
-- **A real transaction ledger**: every deposit, withdrawal, transfer, and airtime purchase is recorded with a running `balance_after`, instead of mutating a balance with no history.
+* JWT authentication with access and refresh tokens
+* Secure password hashing using bcrypt
+* PostgreSQL support for production deployments
+* SQLite support for local development
+* Atomic money transfers using database transactions
+* Server-side validation for user input
+* Transaction ledger with running account balances
+* Money stored as integer minor units (kobo) to prevent floating-point precision errors
+* Automatic database initialization
+* CORS configuration for a separate frontend application
+* Rate limiting on authentication endpoints
+* Security headers using Flask-Talisman
+* HTTPS enforcement in production
+* Request size limits to reduce abuse
 
-## Known limitations — read before using this for anything real
+## Security
 
-- **SQLite locking is not real row-level locking.** `with_for_update()` is a no-op on SQLite; it falls back to SQLite's own file-level locking, which is fine for a single local dev instance but won't give you correct concurrent-transfer semantics under load. On Postgres, the same code gives you a genuine row lock — switch `DATABASE_URL` before this goes anywhere near concurrent traffic.
-- **No rate limiting, audit logging, or idempotency keys.** A retried request to `/transfer` will execute twice. Real payment systems use idempotency keys to prevent this.
-- **No KYC, fraud checks, or regulatory compliance** of any kind — this is a learning/demo skeleton, not a path to a licensed money-transmission product.
-- **CORS is wide open to one origin** (`FRONTEND_ORIGIN` in `.env`) — fine for local dev, but revisit before any public deployment.
-- **The Flask dev server** (`app.run()`) is not production-grade — use gunicorn/uwsgi behind a real web server before deploying anywhere.
+Current security measures include:
+
+* bcrypt password hashing
+* JWT-based authentication
+* Rate limiting on login, registration, refresh, and password change endpoints
+* HTTPS enforcement in production
+* Security headers (Content Security Policy, X-Frame-Options, Referrer Policy, X-Content-Type-Options)
+* Maximum request size limits
+* Environment-based secrets
+* Server-side validation for all user input
+
+## Architecture
+
+The project follows Flask's application factory pattern.
+
+```
+app/
+├── routes/
+│   ├── auth.py
+│   ├── accounts.py
+│   └── transactions.py
+├── models.py
+├── validation.py
+├── errors.py
+├── extensions.py
+└── __init__.py
+```
+
+## Known Limitations
+
+This project is intended as a learning project and portfolio demonstration.
+
+Current limitations include:
+
+* No email verification
+* No token revocation or refresh token rotation
+* No idempotency keys for transaction requests
+* No KYC, fraud detection, or regulatory compliance
+* No database migration system (Flask-Migrate/Alembic)
+
+## License
+
+This project is provided for educational and portfolio purposes.
