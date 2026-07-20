@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16
+    container_name: fintech-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zenith
+      POSTGRES_USER: zenith
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zenith -d zenith"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: fintech-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5050:5050"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://zenith:password@db:5432/zenith
+
+volumes:
+  postgres_data:
