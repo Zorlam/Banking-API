@@ -157,8 +157,8 @@ def transfer():
     sender_account.balance_minor -= amount_minor
     receiver_account.balance_minor += amount_minor
 
-    receiver_user = User.query.get(receiver_account.user_id)
-    sender_user = User.query.get(sender_account.user_id)
+    receiver_user = db.session.get(User, receiver_account.user_id)
+    sender_user = user = db.session.get(User, user_id)
 
     outgoing = Transaction(
         account_id=sender_account.id,

@@ -12,7 +12,7 @@ accounts_bp = Blueprint("accounts", __name__)
 @jwt_required()
 def get_my_account():
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found."}), 404
     return jsonify({"account": user.account.to_dict()})
@@ -23,7 +23,7 @@ def get_my_account():
 @limiter.limit("5 per hour")
 def change_password():
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found."}), 404
 

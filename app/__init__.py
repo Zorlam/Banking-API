@@ -17,8 +17,9 @@ def _normalize_database_url(url: str) -> str:
     return url
 
 
-def create_app():
+def create_app(testing=False, test_config=None):
     app = Flask(__name__)
+    app.config["TESTING"] = testing
 
     app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
     app.config["JWT_SECRET_KEY"] = os.environ["JWT_SECRET_KEY"]
@@ -35,6 +36,9 @@ def create_app():
         days=int(os.environ.get("JWT_REFRESH_TOKEN_EXPIRES_DAYS", 7))
     )
     app.config["JWT_TOKEN_LOCATION"] = ["headers"]
+
+    if test_config:
+        app.config.update(test_config)
 
     db.init_app(app)
     jwt.init_app(app)
@@ -77,7 +81,9 @@ def create_app():
         if not _db_initialized["done"]:
             _db_initialized["done"] = True
             db.create_all()
-            from app.seed import seed_demo_data
-            seed_demo_data()
+
+            if not app.config["TESTING"]:
+                from app.seed import seed_demo_data
+                seed_demo_data()
 
     return app
