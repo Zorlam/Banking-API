@@ -86,4 +86,8 @@ def create_app(testing=False, test_config=None):
                 from app.seed import seed_demo_data
                 seed_demo_data()
 
-    return app
+    @app.get("/health")
+    def health():
+        return {"status": "ok"}, 200
+
+    return app 

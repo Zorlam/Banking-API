@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: fintech-backend
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: fintech-backend
+
+  template:
+    metadata:
+      labels:
+        app: fintech-backend
+
+    spec:
+      containers:
+        - name: fintech-backend
+          image: fintech-backend:2.0
+          imagePullPolicy: IfNotPresent
+
+          envFrom:
+            - secretRef:
+                name: fintech-backend-secret
+
+          ports:
+            - containerPort: 5050
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5050
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5050
+            initialDelaySeconds: 15
+            periodSeconds: 20
