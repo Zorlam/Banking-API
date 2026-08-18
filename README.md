@@ -1,4 +1,4 @@
-# Zenith — Backend
+# Zenith 
 
 A production-deployed Flask REST API powering a banking-style fintech application. The backend implements JWT-based authentication, account management, transaction processing, and secure money transfers using PostgreSQL in production.
 
@@ -11,7 +11,6 @@ The project is fully containerized with Docker, supports multi-container local d
 * **Backend API:** https://banking-backend-2mwq.onrender.com
 * **Frontend:** https://keen-pavlova-f4dc6e.netlify.app
 * **Production Database:** Neon PostgreSQL
-* **Frontend Repository:** https://github.com/Zorlam/banking-frontend
 
 ---
 
@@ -27,7 +26,6 @@ The project is fully containerized with Docker, supports multi-container local d
 
 ### Transaction History
 
-![Transaction History](images/transaction-history.png)
 
 ### GitHub Actions CI
 
